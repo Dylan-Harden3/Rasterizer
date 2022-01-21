@@ -38,21 +38,13 @@ class triangle{
     }
 
     // make a triangle out of 3 vertices
-    triangle(float vertex1[3], float vertex2[3], float vertex3[3]) : 
+    triangle(float vertex1[3], float vertex2[3], float vertex3[3], float color1, float color2, float color3) : 
         v1{ vertex1[0], vertex1[1], vertex1[2] }, 
         v2{ vertex2[0], vertex2[1], vertex2[2] }, 
-        v3{ vertex3[0], vertex3[1], vertex3[2] } {
+        v3{ vertex3[0], vertex3[1], vertex3[2] },
+        colorv1(color1), colorv2(color2), colorv3(color3) {
 
         this->setboundingbox();
-
-    }
-
-    // set the colors of the triangle
-    void setcolors(float color1, float color2, float color3) {
-
-        this->colorv1 = color1;
-        this->colorv2 = color2;
-        this->colorv3 = color3;
 
     }
 

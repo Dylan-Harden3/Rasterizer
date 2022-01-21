@@ -140,13 +140,49 @@ int main(int argc, char** argv)
 
 	vector<triangle> triangles;
 
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	int triangleCounter = 0;
 	// add triangles from posBuf to triangles array
 	for (int i = 0; i < posBuf.size(); i += 9) {
-		float v1[] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
-		float v2[] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
-		float v3[] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
-		triangles.push_back(triangle(v1, v2, v3));
+
+		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
+		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
+		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
+
+		// update min/max x and y
+		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
+		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
+
+		minX = min(minX, *min_element(x, x + 3));
+		minY = min(minY, *min_element(y, y + 3));
+		maxX = max(maxX, *max_element(x, x + 3));
+		maxY = max(maxY, *max_element(y, y + 3));
+
+		triangles.push_back(triangle(v1, v2, v3, RANDOM_COLORS[triangleCounter%7][0], RANDOM_COLORS[triangleCounter %7][1], RANDOM_COLORS[triangleCounter %7][2]));
+
+		triangleCounter++;
 	}
+
+	cout << triangles[0].colorv2 << endl;
+	cout << triangles[1].colorv2 << endl;
+	cout << triangles[2].colorv2 << endl;
+	cout << triangles[3].colorv2 << endl;
+	cout << triangles[4].colorv2 << endl;
+	cout << triangles[5].colorv2 << endl;
+	cout << triangles[6].colorv2 << endl;
+
+
+
+	// Bounding Box for whole image
+	float minXY[2] = { minX, minY };
+	float maxXminY[2] = { maxX, minY };
+	float minXmaxY[2] = { minX, maxY };
+	float maxXY[2] = { maxX, maxY };
 
 	return 0;
 }
