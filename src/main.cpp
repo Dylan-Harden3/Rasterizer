@@ -42,7 +42,7 @@ void colorBoundingBox(shared_ptr<Image>& image, triangle& triangle) {
 }
 
 // function for task 1
-void task1(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+void drawBoundingBoxes(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
 
 	vector<triangle> triangles;
 
@@ -104,6 +104,109 @@ void task1(vector<float>& posBuf, float imgWidth, float imgHeight, string output
 	// Color bounding boxs for all triangles
 	for (int i = 0; i < triangles.size(); i++) {
 		colorBoundingBox(image, triangles[i]);
+	}
+
+	// output image
+	image->writeToFile(outputFilename);
+
+}
+
+// The following code for sign() and pointInTriagle() was adopted from: 
+// https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+
+float sign(float v1[3], float v2[3], float v3[3]) {
+	return (v1[0] - v3[0]) * (v2[1] - v3[1]) - (v2[0] - v3[0]) * (v1[1] - v3[1]);
+}
+
+bool pointInTriangle(float pt[3], float v1[3], float v2[3], float v3[3]) {
+	float d1, d2, d3;
+	bool has_neg, has_pos;
+
+	d1 = sign(pt, v1, v2);
+	d2 = sign(pt, v2, v3);
+	d3 = sign(pt, v3, v1);
+
+	has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+	has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+	return !(has_neg && has_pos);
+}
+
+// color the pixels within a given triangle
+void colorTriangle(shared_ptr<Image>& image, triangle& triangle) {
+	for (int x = triangle.minX; x < triangle.maxX; x++) {
+		for (int y = triangle.minY; y < triangle.maxY; y++) {
+			float point[3] = { x, y, 0};
+			if (pointInTriangle(point, triangle.v1, triangle.v2, triangle.v3)) {
+				image->setPixel(x, y, triangle.red, triangle.green, triangle.blue);
+			}
+		}
+	}
+}
+
+// function for task 2
+void drawTriangles(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	int triangleCounter = 0;
+	// add triangles from posBuf to triangles vector
+	for (int i = 0; i < posBuf.size(); i += 9) {
+
+		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
+		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
+		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
+
+		// update min/max x and y
+		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
+		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
+
+		// update bounding box
+		minX = min(minX, *min_element(x, x + 3));
+		minY = min(minY, *min_element(y, y + 3));
+		maxX = max(maxX, *max_element(x, x + 3));
+		maxY = max(maxY, *max_element(y, y + 3));
+
+		// add triangle to list
+		triangles.push_back(triangle(v1, v2, v3, (unsigned char)(RANDOM_COLORS[triangleCounter % 7][0] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][1] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][2] * 255)));
+
+		triangleCounter++;
+	}
+
+	// find scale factor
+	float scale = min(findScale(minX, maxX, imgWidth), findScale(minY, maxY, imgHeight));
+
+	// find middle of image and world
+	float middleImg[2] = { imgWidth / 2, imgHeight / 2 };
+	float middleWorld[2] = { (minX + maxX) / 2, (minY + maxY) / 2 };
+
+	// find translation x and y
+	float transX = middleImg[0] - scale * middleWorld[0];
+	float transY = middleImg[1] - scale * middleWorld[1];
+
+	// update bounding box
+	minX = convertPoint(minX, scale, transX);
+	minY = convertPoint(minY, scale, transY);
+	maxX = convertPoint(maxX, scale, transX);
+	maxY = convertPoint(maxY, scale, transY);
+
+	// Convert triangles to image space
+	for (int i = 0; i < triangles.size(); i++) {
+		triangles[i].convert(scale, transX, transY);
+	}
+
+	// Create image
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	// Color bounding boxs for all triangles
+	for (int i = 0; i < triangles.size(); i++) {
+		colorTriangle(image, triangles[i]);
 	}
 
 	// output image
@@ -222,7 +325,8 @@ int main(int argc, char** argv)
 	}
 
 	// do desired task based on input
-	if (taskNumber == 1) task1(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 1) drawBoundingBoxes(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 2) drawTriangles(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 }
