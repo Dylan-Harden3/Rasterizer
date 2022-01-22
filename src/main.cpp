@@ -33,7 +33,7 @@ float convertPoint(float point, float scale, float trans) {
 }
 
 // color the bounding box for a given triangle
-void colorBoundingBox(shared_ptr<Image>& image, triangle& triangle) {
+void colorBoundingBox(shared_ptr<Image>& image, const triangle& triangle) {
 	for (int x = triangle.minX ; x < triangle.maxX ;  x++) {
 		for (int y = triangle.minY; y < triangle.maxY; y++) {
 			image->setPixel(x, y, triangle.red, triangle.green, triangle.blue);
@@ -41,16 +41,8 @@ void colorBoundingBox(shared_ptr<Image>& image, triangle& triangle) {
 	}
 }
 
-// function for task 1
-void drawBoundingBoxes(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
-
-	vector<triangle> triangles;
-
-	// Bounding box for whole image
-	float minX = posBuf[0];
-	float minY = posBuf[1];
-	float maxX = posBuf[0];
-	float maxY = posBuf[1];
+// get points from posBuf into triangles vector and update bounding box
+void getPoints(const vector<float>& posBuf, vector<triangle>& triangles, float& minX, float& maxX, float& minY, float& maxY) {
 
 	int triangleCounter = 0;
 	// add triangles from posBuf to triangles vector
@@ -75,7 +67,11 @@ void drawBoundingBoxes(vector<float>& posBuf, float imgWidth, float imgHeight, s
 
 		triangleCounter++;
 	}
+}
 
+//convert points into image space
+void transformPoints(vector<triangle>& triangles, float imgWidth, float imgHeight, float& minX, float& maxX, float& minY, float& maxY) {
+	
 	// find scale factor
 	float scale = min(findScale(minX, maxX, imgWidth), findScale(minY, maxY, imgHeight));
 
@@ -97,6 +93,23 @@ void drawBoundingBoxes(vector<float>& posBuf, float imgWidth, float imgHeight, s
 	for (int i = 0; i < triangles.size(); i++) {
 		triangles[i].convert(scale, transX, transY);
 	}
+
+}
+
+// function for task 1
+void drawBoundingBoxes(const vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPoints(posBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
 
 	// Create image
 	auto image = make_shared<Image>(imgWidth, imgHeight);
@@ -145,7 +158,7 @@ void colorTriangle(shared_ptr<Image>& image, triangle& triangle) {
 }
 
 // function for task 2
-void drawTriangles(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+void drawTriangles(const vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
 
 	vector<triangle> triangles;
 
@@ -155,51 +168,9 @@ void drawTriangles(vector<float>& posBuf, float imgWidth, float imgHeight, strin
 	float maxX = posBuf[0];
 	float maxY = posBuf[1];
 
-	int triangleCounter = 0;
-	// add triangles from posBuf to triangles vector
-	for (int i = 0; i < posBuf.size(); i += 9) {
+	getPoints(posBuf, triangles, minX, maxX, minY, maxY);
 
-		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
-		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
-		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
-
-		// update min/max x and y
-		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
-		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
-
-		// update bounding box
-		minX = min(minX, *min_element(x, x + 3));
-		minY = min(minY, *min_element(y, y + 3));
-		maxX = max(maxX, *max_element(x, x + 3));
-		maxY = max(maxY, *max_element(y, y + 3));
-
-		// add triangle to list
-		triangles.push_back(triangle(v1, v2, v3, (unsigned char)(RANDOM_COLORS[triangleCounter % 7][0] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][1] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][2] * 255)));
-
-		triangleCounter++;
-	}
-
-	// find scale factor
-	float scale = min(findScale(minX, maxX, imgWidth), findScale(minY, maxY, imgHeight));
-
-	// find middle of image and world
-	float middleImg[2] = { imgWidth / 2, imgHeight / 2 };
-	float middleWorld[2] = { (minX + maxX) / 2, (minY + maxY) / 2 };
-
-	// find translation x and y
-	float transX = middleImg[0] - scale * middleWorld[0];
-	float transY = middleImg[1] - scale * middleWorld[1];
-
-	// update bounding box
-	minX = convertPoint(minX, scale, transX);
-	minY = convertPoint(minY, scale, transY);
-	maxX = convertPoint(maxX, scale, transX);
-	maxY = convertPoint(maxY, scale, transY);
-
-	// Convert triangles to image space
-	for (int i = 0; i < triangles.size(); i++) {
-		triangles[i].convert(scale, transX, transY);
-	}
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
 
 	// Create image
 	auto image = make_shared<Image>(imgWidth, imgHeight);
@@ -214,8 +185,7 @@ void drawTriangles(vector<float>& posBuf, float imgWidth, float imgHeight, strin
 
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
 	if (argc < 2) {
 		cout << "Usage: A1 meshfile" << endl;
 		return 0;
@@ -329,4 +299,5 @@ int main(int argc, char** argv)
 	if (taskNumber == 2) drawTriangles(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
+
 }
