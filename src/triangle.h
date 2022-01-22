@@ -8,7 +8,7 @@ class triangle {
     // vertices
     float v1[3], v2[3], v3[3];
     // bounding box
-    float minxy[2], maxxminy[2], maxxy[2], minxmaxy[2];
+    float minX, maxX, minY, maxY;
     // colors
     unsigned char red, green, blue;
 
@@ -20,20 +20,10 @@ class triangle {
         float z[3] = { v1[2], v2[2], v3[2] };
 
         // get min/max x and y coordinates
-        float minx = *min_element(x, x+3);
-        float miny = *min_element(y, y + 3);
-        float maxx = *max_element(x, x + 3);
-        float maxy = *max_element(y, y + 3);
-
-        // set bounding box
-        this->minxy[0] = minx;
-        this->minxy[1] = miny;
-        this->maxxminy[0] = maxx;
-        this->maxxminy[1] = miny;
-        this->maxxy[0] = maxx;
-        this->maxxy[1] = maxy;
-        this->minxmaxy[0] = minx;
-        this->minxmaxy[1] = maxy;
+        this->minX = *min_element(x, x+3);
+        this->minY = *min_element(y, y + 3);
+        this->maxX = *max_element(x, x + 3);
+        this->maxY = *max_element(y, y + 3);
 
     }
 

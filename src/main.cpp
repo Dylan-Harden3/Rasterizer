@@ -22,20 +22,93 @@ double RANDOM_COLORS[7][3] = {
 	{0.6350,    0.0780,    0.1840},
 };
 
+// find scale given min/max world coords and deltaimg
 float findScale(float minWorld, float maxWorld, int changeImage) {
 	return (changeImage / (maxWorld - minWorld));
 }
 
+// convert point from world space to image space
 float convertPoint(float point, float scale, float trans) {
 	return floor(scale * point + trans);
 }
 
-void colorBoundingBox(shared_ptr<Image> image, triangle& triangle) {
-	for (int x = triangle.minxy[0] ; x < triangle.maxxy[0] ;  x++) {
-		for (int y = triangle.minxy[1]; y < triangle.maxxy[1]; y++) {
+// color the bounding box for a given triangle
+void colorBoundingBox(shared_ptr<Image>& image, triangle& triangle) {
+	for (int x = triangle.minX ; x < triangle.maxX ;  x++) {
+		for (int y = triangle.minY; y < triangle.maxY; y++) {
 			image->setPixel(x, y, triangle.red, triangle.green, triangle.blue);
 		}
 	}
+}
+
+// function for task 1
+void task1(vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	int triangleCounter = 0;
+	// add triangles from posBuf to triangles vector
+	for (int i = 0; i < posBuf.size(); i += 9) {
+
+		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
+		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
+		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
+
+		// update min/max x and y
+		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
+		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
+
+		// update bounding box
+		minX = min(minX, *min_element(x, x + 3));
+		minY = min(minY, *min_element(y, y + 3));
+		maxX = max(maxX, *max_element(x, x + 3));
+		maxY = max(maxY, *max_element(y, y + 3));
+
+		// add triangle to list
+		triangles.push_back(triangle(v1, v2, v3, (unsigned char)(RANDOM_COLORS[triangleCounter % 7][0] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][1] * 255), (unsigned char)(RANDOM_COLORS[triangleCounter % 7][2] * 255)));
+
+		triangleCounter++;
+	}
+
+	// find scale factor
+	float scale = min(findScale(minX, maxX, imgWidth), findScale(minY, maxY, imgHeight));
+
+	// find middle of image and world
+	float middleImg[2] = { imgWidth / 2, imgHeight / 2 };
+	float middleWorld[2] = { (minX + maxX) / 2, (minY + maxY) / 2 };
+
+	// find translation x and y
+	float transX = middleImg[0] - scale * middleWorld[0];
+	float transY = middleImg[1] - scale * middleWorld[1];
+
+	// update bounding box
+	minX = convertPoint(minX, scale, transX);
+	minY = convertPoint(minY, scale, transY);
+	maxX = convertPoint(maxX, scale, transX);
+	maxY = convertPoint(maxY, scale, transY);
+
+	// Convert triangles to image space
+	for (int i = 0; i < triangles.size(); i++) {
+		triangles[i].convert(scale, transX, transY);
+	}
+
+	// Create image
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	// Color bounding boxs for all triangles
+	for (int i = 0; i < triangles.size(); i++) {
+		colorBoundingBox(image, triangles[i]);
+	}
+
+	// output image
+	image->writeToFile(outputFilename);
+
 }
 
 int main(int argc, char** argv)
@@ -148,71 +221,8 @@ int main(int argc, char** argv)
 		}
 	}
 
-	vector<triangle> triangles;
-
-	// Bounding box for whole image
-	float minX = posBuf[0];
-	float minY = posBuf[1];
-	float maxX = posBuf[0];
-	float maxY = posBuf[1];
-
-	int triangleCounter = 0;
-	// add triangles from posBuf to triangles array
-	for (int i = 0; i < posBuf.size(); i += 9) {
-
-		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
-		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
-		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
-
-		// update min/max x and y
-		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
-		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
-
-		minX = min(minX, *min_element(x, x + 3));
-		minY = min(minY, *min_element(y, y + 3));
-		maxX = max(maxX, *max_element(x, x + 3));
-		maxY = max(maxY, *max_element(y, y + 3));
-
-		triangles.push_back(triangle(v1, v2, v3,(unsigned char) (RANDOM_COLORS[triangleCounter%7][0] * 255), (unsigned char) (RANDOM_COLORS[triangleCounter%7][1] * 255),(unsigned char)(RANDOM_COLORS[triangleCounter%7][2] * 255)));
-
-		triangleCounter++;
-	}
-	
-	// find scale factor
-	float scale = min(findScale(minX, maxX, imgWidth), findScale(minY, maxY, imgHeight));
-
-	// find middle of image and world
-	float middleImg[2] = { imgWidth / 2, imgHeight / 2 };
-	float middleWorld[2] = { (minX + maxX) / 2, (minY + maxY) / 2 };
-	
-	// find translation x and y
-	float transX = middleImg[0] - scale * middleWorld[0];
-	float transY = middleImg[1] - scale * middleWorld[1];
-
-	// Bounding Box for whole image
-	float minXY[2] = { minX, minY };
-	float maxXminY[2] = { maxX, minY };
-	float minXmaxY[2] = { minX, maxY };
-	float maxXY[2] = { maxX, maxY };
-	
-	minX = convertPoint(minX, scale, transX);
-	minY = convertPoint(minY, scale, transY);
-	maxX = convertPoint(maxX, scale, transX);
-	maxY = convertPoint(maxY, scale, transY);
-
-	// Convert triangles to image space
-	for (int i = 0; i < triangles.size(); i++) {
-		triangles[i].convert(scale, transX, transY);
-	}
-
-	// Create image
-	auto image = make_shared<Image>(imgWidth, imgHeight);
-
-	for (int i = 0; i < triangles.size(); i++) {
-		colorBoundingBox(image, triangles[i]);
-	}
-
-	image->writeToFile(outputFilename);
+	// do desired task based on input
+	if (taskNumber == 1) task1(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 }
