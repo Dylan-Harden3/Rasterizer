@@ -185,6 +185,57 @@ void drawTriangles(const vector<float>& posBuf, float imgWidth, float imgHeight,
 
 }
 
+// PUT TASK 3 HERE
+
+// color triangles by interpolating fade
+void colorTrianglesVertical(shared_ptr<Image>& image, vector<triangle>& triangles, int numPixelsY, int minY) {
+
+	// find rate at which colors should shift
+	float fadeRate = 255.0 / numPixelsY;
+
+	for (int i = 0 ; i < triangles.size() ; i++) {
+		for (int y = triangles[i].minY ; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+				// calculate the color at the given pixel from the fade rate * the distance from the bottom of the object
+				triangles[i].red = (unsigned char) (fadeRate * (y - minY));
+				triangles[i].blue = (unsigned char) (255 - (fadeRate * (y -minY)));
+				triangles[i].green = (unsigned char) 0;
+
+				float point[3] = { x, y, 0 };
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+					image->setPixel(x, y, triangles[i].red, triangles[i].green, triangles[i].blue);
+				}
+
+			}
+		}
+	}
+}
+
+// function for task 4
+void drawVerticalColor(const vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPoints(posBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
+
+	// Create image
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	colorTrianglesVertical(image, triangles, (maxY - minY), minY);
+
+	// output image
+	image->writeToFile(outputFilename);
+
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
 		cout << "Usage: A1 meshfile" << endl;
@@ -297,6 +348,7 @@ int main(int argc, char** argv) {
 	// do desired task based on input
 	if (taskNumber == 1) drawBoundingBoxes(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 2) drawTriangles(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 3) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 
