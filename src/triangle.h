@@ -5,12 +5,25 @@ using namespace std;
 class triangle {
     
     public:
+
+    const double RANDOM_COLORS[7][3] = {
+        {0.0000,    0.4470,    0.7410},
+        {0.8500,    0.3250,    0.0980},
+        {0.9290,    0.6940,    0.1250},
+        {0.4940,    0.1840,    0.5560},
+        {0.4660,    0.6740,    0.1880},
+        {0.3010,    0.7450,    0.9330},
+        {0.6350,    0.0780,    0.1840},
+    };
+
     // vertices
     float v1[3], v2[3], v3[3];
     // bounding box
     float minX, maxX, minY, maxY;
     // colors
     unsigned char red, green, blue;
+    // per vertex colors (task 3)
+    float v1Color[3], v2Color[3], v3Color[3];
 
     void setboundingbox() {
 
@@ -34,6 +47,30 @@ class triangle {
         v3{ vertex3[0], vertex3[1], vertex3[2] },
         red(red), green(green), blue(blue) {
 
+        this->setboundingbox();
+
+    }
+
+    // make a triangle out of 3 vertices without colors
+    triangle(float vertex1[3], float vertex2[3], float vertex3[3], int triangleCounter) :
+        v1{ vertex1[0], vertex1[1], vertex1[2] },
+        v2{ vertex2[0], vertex2[1], vertex2[2] },
+        v3{ vertex3[0], vertex3[1], vertex3[2] } {
+
+        this->v1Color[0] = this->RANDOM_COLORS[triangleCounter % 7][0];
+        this->v1Color[1] = this->RANDOM_COLORS[triangleCounter % 7][1];
+        this->v1Color[2] = this->RANDOM_COLORS[triangleCounter % 7][2];
+
+        this->v2Color[0] = this->RANDOM_COLORS[(triangleCounter + 1) % 7][0];
+        this->v2Color[1] = this->RANDOM_COLORS[(triangleCounter + 1) % 7][1];
+        this->v2Color[2] = this->RANDOM_COLORS[(triangleCounter + 1) % 7][2];
+
+        this->v3Color[0] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][0];
+        this->v3Color[1] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][1];
+        this->v3Color[2] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][2];
+
+        //cout << this->v1Color[0] << " " << this->v2Color[0] << " " << this->v3Color[0] << endl;
+       
         this->setboundingbox();
 
     }

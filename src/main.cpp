@@ -185,7 +185,84 @@ void drawTriangles(const vector<float>& posBuf, float imgWidth, float imgHeight,
 
 }
 
-// PUT TASK 3 HERE
+// Task 3
+float triangleArea(float v1[3], float v2[3], float v3[3]) {
+	return 0.5 * (v1[0] * (v2[1] - v3[1]) + v2[0] * (v3[1] - v1[1]) + v3[0] * (v1[1] - v2[1]));
+}
+
+// get points from posBuf into triangles vector and update bounding box, also use vertex colors
+void getPointsPerVertexColors(const vector<float>& posBuf, vector<triangle>& triangles, float& minX, float& maxX, float& minY, float& maxY) {
+
+	int triangleCounter = 0;
+	// add triangles from posBuf to triangles vector
+	for (int i = 0; i < posBuf.size(); i += 9) {
+		
+		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
+		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
+		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
+
+		// update min/max x and y
+		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
+		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
+
+		// update bounding box
+		minX = min(minX, *min_element(x, x + 3));
+		minY = min(minY, *min_element(y, y + 3));
+		maxX = max(maxX, *max_element(x, x + 3));
+		maxY = max(maxY, *max_element(y, y + 3));
+
+		// add triangle to list
+		triangles.push_back(triangle(v1, v2, v3, triangleCounter));
+		triangleCounter += 3;
+	}
+}
+
+void interpolatePerVertex(const vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPointsPerVertexColors(posBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
+
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	for (int i = 0; i < triangles.size(); i++) {
+		for (int y = triangles[i].minY; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+				// calculate color at pixel
+				float point[3] = { x, y, 0 };
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+
+					// calculate area of whole triangle
+					float triArea = triangleArea(triangles[i].v1, triangles[i].v2, triangles[i].v3);
+					
+					// get barycoords
+					float ratioV1 = triangleArea(point, triangles[i].v2, triangles[i].v3) / triArea;
+					float ratioV2 = triangleArea(point, triangles[i].v3, triangles[i].v1) / triArea;
+					float ratioV3 = triangleArea(point, triangles[i].v1, triangles[i].v2) / triArea;
+
+					// convert barycoords to rgb
+					unsigned char r = ratioV1 * triangles[i].v1Color[0] * 255 + ratioV2 * triangles[i].v2Color[0] * 255 + ratioV3 * triangles[i].v3Color[0] * 255;
+					unsigned char g = ratioV1 * triangles[i].v1Color[1] * 255 + ratioV2 * triangles[i].v2Color[1] * 255 + ratioV3 * triangles[i].v3Color[1] * 255;
+					unsigned char b = ratioV1 * triangles[i].v1Color[2] * 255 + ratioV2 * triangles[i].v2Color[2] * 255 + ratioV3 * triangles[i].v3Color[2] * 255;;
+
+					image->setPixel(x, y, r, g, b);
+				}
+
+			}
+		}
+	}
+
+	image->writeToFile(outputFilename);
+
+}
 
 // color triangles by interpolating fade
 void colorTrianglesVertical(shared_ptr<Image>& image, vector<triangle>& triangles, int numPixelsY, int minY) {
@@ -348,7 +425,8 @@ int main(int argc, char** argv) {
 	// do desired task based on input
 	if (taskNumber == 1) drawBoundingBoxes(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 2) drawTriangles(posBuf, imgWidth, imgHeight, outputFilename);
-	if (taskNumber == 3) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 3) interpolatePerVertex(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 4) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 
