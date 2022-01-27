@@ -1,7 +1,7 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 #include <algorithm>
-using namespace std;
+
 class triangle {
     
     public:
@@ -33,10 +33,10 @@ class triangle {
         float z[3] = { v1[2], v2[2], v3[2] };
 
         // get min/max x and y coordinates
-        this->minX = *min_element(x, x + 3);
-        this->minY = *min_element(y, y + 3);
-        this->maxX = *max_element(x, x + 3);
-        this->maxY = *max_element(y, y + 3);
+        this->minX = *std::min_element(x, x + 3);
+        this->minY = *std::min_element(y, y + 3);
+        this->maxX = *std::max_element(x, x + 3);
+        this->maxY = *std::max_element(y, y + 3);
 
     }
 

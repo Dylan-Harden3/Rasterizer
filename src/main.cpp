@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <limits>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
@@ -251,7 +252,7 @@ void interpolatePerVertex(const vector<float>& posBuf, float imgWidth, float img
 					// convert barycoords to rgb
 					unsigned char r = ratioV1 * triangles[i].v1Color[0] * 255 + ratioV2 * triangles[i].v2Color[0] * 255 + ratioV3 * triangles[i].v3Color[0] * 255;
 					unsigned char g = ratioV1 * triangles[i].v1Color[1] * 255 + ratioV2 * triangles[i].v2Color[1] * 255 + ratioV3 * triangles[i].v3Color[1] * 255;
-					unsigned char b = ratioV1 * triangles[i].v1Color[2] * 255 + ratioV2 * triangles[i].v2Color[2] * 255 + ratioV3 * triangles[i].v3Color[2] * 255;;
+					unsigned char b = ratioV1 * triangles[i].v1Color[2] * 255 + ratioV2 * triangles[i].v2Color[2] * 255 + ratioV3 * triangles[i].v3Color[2] * 255;
 
 					image->setPixel(x, y, r, g, b);
 				}
@@ -309,6 +310,111 @@ void drawVerticalColor(const vector<float>& posBuf, float imgWidth, float imgHei
 	colorTrianglesVertical(image, triangles, (maxY - minY), minY);
 
 	// output image
+	image->writeToFile(outputFilename);
+
+}
+
+// task 5
+void updatePointsWithZ(vector<triangle>& triangles, vector<vector<float>>& zbuffer, shared_ptr<Image>& image, float& minZ, float& maxZ) {
+
+	bool assigned = true;
+	for (int i = 0; i < triangles.size(); i++) {
+		for (int y = triangles[i].minY; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+
+				float point[3] = { x, y, 0 };
+
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+
+					// calculate area of whole triangle
+					float triArea = triangleArea(triangles[i].v1, triangles[i].v2, triangles[i].v3);
+
+					// get barycoords
+					float ratioV1 = triangleArea(point, triangles[i].v2, triangles[i].v3) / triArea;
+					float ratioV2 = triangleArea(point, triangles[i].v3, triangles[i].v1) / triArea;
+					float ratioV3 = triangleArea(point, triangles[i].v1, triangles[i].v2) / triArea;
+
+					// convert barycoords to rgb
+					unsigned char r = ratioV1 * triangles[i].v1Color[0] * 255 + ratioV2 * triangles[i].v2Color[0] * 255 + ratioV3 * triangles[i].v3Color[0] * 255;
+					unsigned char g = ratioV1 * triangles[i].v1Color[1] * 255 + ratioV2 * triangles[i].v2Color[1] * 255 + ratioV3 * triangles[i].v3Color[1] * 255;
+					unsigned char b = ratioV1 * triangles[i].v1Color[2] * 255 + ratioV2 * triangles[i].v2Color[2] * 255 + ratioV3 * triangles[i].v3Color[2] * 255;
+
+					// calculate z from barycoords
+					float zIndex = ratioV1 * triangles[i].v1[2] + ratioV2 * triangles[i].v2[2] + ratioV3 * triangles[i].v3[2];
+
+					// keep track of min/max z to convert to rgb
+					if (assigned) {
+						maxZ = zIndex;
+						minZ = zIndex;
+						assigned = false;
+					}
+
+					if (zIndex < minZ) minZ = zIndex;
+					if (zIndex > maxZ) maxZ = zIndex;
+
+					if (zIndex > zbuffer[y][x]) {
+
+						zbuffer[y][x] = zIndex;
+
+					}
+
+				}
+
+			}
+		}
+	}
+
+	// make another pass since we can now scale the zs from 0 to 255
+	for (int i = 0; i < triangles.size(); i++) {
+		for (int y = triangles[i].minY; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+
+				float point[3] = { x, y, 0 };
+
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+
+					// calculate area of whole triangle
+					float triArea = triangleArea(triangles[i].v1, triangles[i].v2, triangles[i].v3);
+
+					// get barycoords
+					float ratioV1 = triangleArea(point, triangles[i].v2, triangles[i].v3) / triArea;
+					float ratioV2 = triangleArea(point, triangles[i].v3, triangles[i].v1) / triArea;
+					float ratioV3 = triangleArea(point, triangles[i].v1, triangles[i].v2) / triArea;
+
+					float zIndex = ratioV1 * triangles[i].v1[2] + ratioV2 * triangles[i].v2[2] + ratioV3 * triangles[i].v3[2];
+
+					if (zIndex == zbuffer[y][x]) {
+						image->setPixel(x, y, ((zIndex - minZ ) / (maxZ - minZ)) * 255, 0, 0);
+					}
+				}
+			}
+		}
+	}
+}
+
+void zbuffer(vector<float>& posBuf, int imgWidth, int imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPointsPerVertexColors(posBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
+
+	vector<vector<float>> zbuffer(imgHeight, vector<float>(imgWidth, -std::numeric_limits<float>::infinity()));
+
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	float minZ = NULL;
+	float maxZ = NULL;
+
+	updatePointsWithZ(triangles, zbuffer, image, minZ, maxZ);
+
 	image->writeToFile(outputFilename);
 
 }
@@ -427,6 +533,7 @@ int main(int argc, char** argv) {
 	if (taskNumber == 2) drawTriangles(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 3) interpolatePerVertex(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 4) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 5) zbuffer(posBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 
