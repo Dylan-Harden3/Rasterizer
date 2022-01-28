@@ -1,7 +1,9 @@
 #include <iostream>
 #include <string>
-#include <limits>
-
+#include <limits>       /* -infinity */
+#include <math.h>       /* sqrt */
+#include <algorithm>    /* max */
+ 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -510,6 +512,71 @@ void normalColoring(vector<float>& posBuf, vector<float>& norBuf, int imgWidth, 
 
 }
 
+// Task 7
+double dotProd(float pixelX, float pixelY, float pixelZ) {
+	float s = 1 / sqrt(3);
+	return s * pixelX + s * pixelY + s * pixelZ;
+}
+
+void simpleLighting(vector<float>& posBuf, vector<float>& norBuf, int imgWidth, int imgHeight, string outputFilename) {
+
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPointsWithNormals(posBuf, norBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
+
+	vector<vector<float>> zbuffer(imgHeight, vector<float>(imgWidth, -std::numeric_limits<float>::infinity()));
+
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	float minZ = NULL;
+	float maxZ = NULL;
+
+	updatePointsWithZ(triangles, zbuffer, image, minZ, maxZ);
+
+	for (int i = 0; i < triangles.size(); i++) {
+		for (int y = triangles[i].minY; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+
+				float point[3] = { x , y , 0 };
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+					// calculate area of whole triangle
+					float triArea = triangleArea(triangles[i].v1, triangles[i].v2, triangles[i].v3);
+
+					// get barycoords
+					float ratioV1 = triangleArea(point, triangles[i].v2, triangles[i].v3) / triArea;
+					float ratioV2 = triangleArea(point, triangles[i].v3, triangles[i].v1) / triArea;
+					float ratioV3 = triangleArea(point, triangles[i].v1, triangles[i].v2) / triArea;
+
+					// use barycoords to get normal of pixel
+					float pixelX = ratioV1 * triangles[i].n1[0] + ratioV2 * triangles[i].n2[0] + ratioV3 * triangles[i].n3[0];
+					float pixelY = ratioV1 * triangles[i].n1[1] + ratioV2 * triangles[i].n2[1] + ratioV3 * triangles[i].n3[1];
+					float pixelZ = ratioV1 * triangles[i].n1[2] + ratioV2 * triangles[i].n2[2] + ratioV3 * triangles[i].n3[2];
+
+					float zIndex = ratioV1 * triangles[i].v1[2] + ratioV2 * triangles[i].v2[2] + ratioV3 * triangles[i].v3[2];
+
+					if (zIndex == zbuffer[y][x]) {
+
+						float c = std::max(dotProd(pixelX, pixelY, pixelZ), 0.0);
+
+						image->setPixel(x, y, 255 * c, 255 * c, 255 * c);
+					}
+				}
+			}
+		}
+	}
+
+	image->writeToFile(outputFilename);
+
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
 		cout << "Usage: A1 meshfile" << endl;
@@ -626,6 +693,7 @@ int main(int argc, char** argv) {
 	if (taskNumber == 4) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 5) zbuffer(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 6) normalColoring(posBuf, norBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 7) simpleLighting(posBuf, norBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 
