@@ -363,6 +363,9 @@ void updatePointsWithZ(vector<triangle>& triangles, vector<vector<float>>& zbuff
 			}
 		}
 	}
+}
+
+void colorRedDistance(vector<triangle>& triangles, vector<vector<float>>& zbuffer, shared_ptr<Image>& image, float minZ, float maxZ) {
 
 	// make another pass since we can now scale the zs from 0 to 255
 	for (int i = 0; i < triangles.size(); i++) {
@@ -414,6 +417,94 @@ void zbuffer(vector<float>& posBuf, int imgWidth, int imgHeight, string outputFi
 	float maxZ = NULL;
 
 	updatePointsWithZ(triangles, zbuffer, image, minZ, maxZ);
+
+	colorRedDistance(triangles, zbuffer, image, minZ, maxZ);
+
+	image->writeToFile(outputFilename);
+
+}
+
+// Task 6
+void getPointsWithNormals(vector<float>& posBuf,vector<float>& norBuf, vector<triangle>& triangles, float& minX, float& maxX, float& minY, float& maxY) {
+	
+	int triangleCounter = 0;
+	// add triangles from posBuf to triangles vector
+	for (int i = 0; i < posBuf.size(); i += 9) {
+
+		float v1[3] = { posBuf[i], posBuf[i + 1], posBuf[i + 2] };
+		float v2[3] = { posBuf[i + 3], posBuf[i + 4], posBuf[i + 5] };
+		float v3[3] = { posBuf[i + 6], posBuf[i + 7], posBuf[i + 8] };
+
+		float n1[3] = { norBuf[i], norBuf[i + 1], norBuf[i + 2] };
+		float n2[3] = { norBuf[i + 3], norBuf[i + 4], norBuf[i + 5] };
+		float n3[3] = { norBuf[i + 6], norBuf[i + 7], norBuf[i + 8] };
+
+		// update min/max x and y
+		float x[3] = { posBuf[i], posBuf[i + 3], posBuf[i + 6] };
+		float y[3] = { posBuf[i + 1], posBuf[i + 4], posBuf[i + 7] };
+
+		// update bounding box
+		minX = min(minX, *min_element(x, x + 3));
+		minY = min(minY, *min_element(y, y + 3));
+		maxX = max(maxX, *max_element(x, x + 3));
+		maxY = max(maxY, *max_element(y, y + 3));
+
+		// add triangle to list
+		triangles.push_back(triangle(v1, v2, v3, n1, n2, n3));
+
+		triangleCounter++;
+	}
+
+}
+void normalColoring(vector<float>& posBuf, vector<float>& norBuf, int imgWidth, int imgHeight, string outputFilename) {
+	vector<triangle> triangles;
+
+	// Bounding box for whole image
+	float minX = posBuf[0];
+	float minY = posBuf[1];
+	float maxX = posBuf[0];
+	float maxY = posBuf[1];
+
+	getPointsWithNormals(posBuf, norBuf, triangles, minX, maxX, minY, maxY);
+
+	transformPoints(triangles, imgWidth, imgHeight, minX, maxX, minY, maxY);
+
+	vector<vector<float>> zbuffer(imgHeight, vector<float>(imgWidth, -std::numeric_limits<float>::infinity()));
+
+	auto image = make_shared<Image>(imgWidth, imgHeight);
+
+	float minZ = NULL;
+	float maxZ = NULL;
+
+	updatePointsWithZ(triangles, zbuffer, image, minZ, maxZ);
+
+	for (int i = 0; i < triangles.size(); i++) {
+		for (int y = triangles[i].minY; y < triangles[i].maxY; y++) {
+			for (int x = triangles[i].minX; x < triangles[i].maxX; x++) {
+
+				float point[3] = { x , y , 0 }; 
+				if (pointInTriangle(point, triangles[i].v1, triangles[i].v2, triangles[i].v3)) {
+					// calculate area of whole triangle
+					float triArea = triangleArea(triangles[i].v1, triangles[i].v2, triangles[i].v3);
+
+					// get barycoords
+					float ratioV1 = triangleArea(point, triangles[i].v2, triangles[i].v3) / triArea;
+					float ratioV2 = triangleArea(point, triangles[i].v3, triangles[i].v1) / triArea;
+					float ratioV3 = triangleArea(point, triangles[i].v1, triangles[i].v2) / triArea;
+
+					// use barycoords to get normal of pixel
+					float pixelX = ratioV1 * triangles[i].n1[0] + ratioV2 * triangles[i].n2[0] + ratioV3 * triangles[i].n3[0];
+					float pixelY = ratioV1 * triangles[i].n1[1] + ratioV2 * triangles[i].n2[1] + ratioV3 * triangles[i].n3[1];
+					float pixelZ = ratioV1 * triangles[i].n1[2] + ratioV2 * triangles[i].n2[2] + ratioV3 * triangles[i].n3[2];
+
+					float zIndex = ratioV1 * triangles[i].v1[2] + ratioV2 * triangles[i].v2[2] + ratioV3 * triangles[i].v3[2];
+
+					if (zIndex == zbuffer[y][x]) {
+						image->setPixel(x, y, 255 * (pixelX * 0.5 + 0.5), 255 * (pixelY * 0.5 + 0.5), 255 * (pixelZ * 0.5 + 0.5));
+					}				}
+			}
+		}
+	}
 
 	image->writeToFile(outputFilename);
 
@@ -534,6 +625,7 @@ int main(int argc, char** argv) {
 	if (taskNumber == 3) interpolatePerVertex(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 4) drawVerticalColor(posBuf, imgWidth, imgHeight, outputFilename);
 	if (taskNumber == 5) zbuffer(posBuf, imgWidth, imgHeight, outputFilename);
+	if (taskNumber == 6) normalColoring(posBuf, norBuf, imgWidth, imgHeight, outputFilename);
 
 	return 0;
 

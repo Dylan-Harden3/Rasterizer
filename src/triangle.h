@@ -18,6 +18,8 @@ class triangle {
 
     // vertices
     float v1[3], v2[3], v3[3];
+    // normals
+    float n1[3], n2[3], n3[3];
     // bounding box
     float minX, maxX, minY, maxY;
     // colors
@@ -71,6 +73,19 @@ class triangle {
 
         //cout << this->v1Color[0] << " " << this->v2Color[0] << " " << this->v3Color[0] << endl;
        
+        this->setboundingbox();
+
+    }
+
+    // make a triangle with normals
+    triangle(float vertex1[3], float vertex2[3], float vertex3[3], float normal1[3], float normal2[3], float normal3[3]) :
+        v1{ vertex1[0], vertex1[1], vertex1[2] },
+        v2{ vertex2[0], vertex2[1], vertex2[2] },
+        v3{ vertex3[0], vertex3[1], vertex3[2] },
+        n1{ normal1[0], normal1[1], normal1[2] },
+        n2{ normal2[0], normal2[1], normal2[2] },
+        n3{ normal3[0], normal3[1], normal3[2] } {
+
         this->setboundingbox();
 
     }
