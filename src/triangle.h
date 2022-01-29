@@ -71,8 +71,6 @@ class triangle {
         this->v3Color[0] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][0];
         this->v3Color[1] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][1];
         this->v3Color[2] = this->RANDOM_COLORS[(triangleCounter + 2) % 7][2];
-
-        //cout << this->v1Color[0] << " " << this->v2Color[0] << " " << this->v3Color[0] << endl;
        
         this->setboundingbox();
 
