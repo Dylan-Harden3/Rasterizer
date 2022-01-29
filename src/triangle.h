@@ -1,11 +1,12 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
-#include <algorithm>
+#include <algorithm>    /* std::min_element, std:: max_element */
 
+// class to represent one of the triangles
 class triangle {
     
     public:
-
+    
     const double RANDOM_COLORS[7][3] = {
         {0.0000,    0.4470,    0.7410},
         {0.8500,    0.3250,    0.0980},

@@ -10,10 +10,11 @@
 #include "Image.h"
 #include "triangle.h"
 
-// This allows you to skip the `std::` in front of C++ standard library
-// functions. You can also say `using std::cout` to be more selective.
-// You should never do this in a header file.
 using namespace std;
+
+/**********************************************************************************************
+ *Each task is separated into its unique functions, some tasks use functions from other tasks.*
+ **********************************************************************************************/
 
 double RANDOM_COLORS[7][3] = {
 	{0.0000,    0.4470,    0.7410},
@@ -24,6 +25,8 @@ double RANDOM_COLORS[7][3] = {
 	{0.3010,    0.7450,    0.9330},
 	{0.6350,    0.0780,    0.1840},
 };
+
+// TASK 1
 
 // find scale given min/max world coords and deltaimg
 float findScale(float minWorld, float maxWorld, int changeImage) {
@@ -127,6 +130,8 @@ void drawBoundingBoxes(const vector<float>& posBuf, float imgWidth, float imgHei
 
 }
 
+// TASK 2
+
 // The following code for sign() and pointInTriagle() was adopted from: 
 // https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
 
@@ -188,7 +193,9 @@ void drawTriangles(const vector<float>& posBuf, float imgWidth, float imgHeight,
 
 }
 
-// Task 3
+// TASK 3
+
+// computer area of triangle given 3 vertices
 float triangleArea(float v1[3], float v2[3], float v3[3]) {
 	return 0.5 * (v1[0] * (v2[1] - v3[1]) + v2[0] * (v3[1] - v1[1]) + v3[0] * (v1[1] - v2[1]));
 }
@@ -291,6 +298,8 @@ void colorTrianglesVertical(shared_ptr<Image>& image, vector<triangle>& triangle
 	}
 }
 
+// TASK 4
+
 // function for task 4
 void drawVerticalColor(const vector<float>& posBuf, float imgWidth, float imgHeight, string outputFilename) {
 
@@ -316,7 +325,7 @@ void drawVerticalColor(const vector<float>& posBuf, float imgWidth, float imgHei
 
 }
 
-// task 5
+// TASK 5
 void updatePointsWithZ(vector<triangle>& triangles, vector<vector<float>>& zbuffer, shared_ptr<Image>& image, float& minZ, float& maxZ) {
 
 	bool assigned = true;
@@ -426,8 +435,8 @@ void zbuffer(vector<float>& posBuf, int imgWidth, int imgHeight, string outputFi
 
 }
 
-// Task 6
-void getPointsWithNormals(vector<float>& posBuf,vector<float>& norBuf, vector<triangle>& triangles, float& minX, float& maxX, float& minY, float& maxY) {
+// TASK 6
+void getPointsWithNormals(vector<float>& posBuf, vector<float>& norBuf, vector<triangle>& triangles, float& minX, float& maxX, float& minY, float& maxY) {
 	
 	int triangleCounter = 0;
 	// add triangles from posBuf to triangles vector
@@ -512,7 +521,7 @@ void normalColoring(vector<float>& posBuf, vector<float>& norBuf, int imgWidth, 
 
 }
 
-// Task 7
+// TASK 7
 double dotProd(float pixelX, float pixelY, float pixelZ) {
 	float s = 1 / sqrt(3);
 	return s * pixelX + s * pixelY + s * pixelZ;
